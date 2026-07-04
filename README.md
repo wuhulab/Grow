@@ -50,26 +50,6 @@ Graw/
 - Node.js 16+
 - （可选）Docker 引擎，用于 Docker 管理功能
 
-### 一键启动
-
-**Windows**
-
-```powershell
-start.bat
-```
-
-**Linux / macOS**
-
-```bash
-chmod +x start.sh
-./start.sh
-```
-
-脚本会自动创建 Python 虚拟环境、安装依赖并同时启动前后端服务：
-
-- 后端：`http://localhost:8000`
-- 前端：`http://localhost:5173`
-
 ### 手动启动
 
 **1. 启动后端**

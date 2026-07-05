@@ -14,6 +14,7 @@ import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
+import { auth } from '../../store/auth'
 
 const termEl = ref(null)
 const statusText = ref('未连接')
@@ -31,8 +32,10 @@ function connect() {
   if (ws) { try { ws.close() } catch (e) {} }
   const proto = location.protocol === 'https:' ? 'wss' : 'ws'
   setStatus('连接中...')
+  // 浏览器 WebSocket 无法设置请求头，token 通过查询参数传递
+  const tokenParam = auth.token ? `?token=${encodeURIComponent(auth.token)}` : ''
   try {
-    ws = new WebSocket(`${proto}://${location.host}/api/terminal/ws`)
+    ws = new WebSocket(`${proto}://${location.host}/api/terminal/ws${tokenParam}`)
   } catch (e) {
     scheduleReconnect()
     return

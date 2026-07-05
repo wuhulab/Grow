@@ -1,5 +1,6 @@
 <template>
-  <div class="desktop">
+  <Login v-if="!loggedIn" @login="onLoggedIn" />
+  <div v-else class="desktop">
     <div class="desktop-content">
       <!-- Shortcuts -->
       <div class="shortcuts">
@@ -58,6 +59,20 @@
           <span class="title">{{ w.title }}</span>
         </div>
       </div>
+      <div class="user-chip" :title="auth.user?.role === 'admin' ? '管理员' : '用户'" @click="toggleUserMenu">
+        <UserCircle2 :size="20" />
+        <span class="name">{{ auth.user?.username }}</span>
+        <span v-if="auth.user?.role === 'admin'" class="role-badge">管理</span>
+      </div>
+      <div v-if="userMenuOpen" class="user-menu" @click.stop>
+        <div class="meta">
+          <div class="nm">{{ auth.user?.username }}</div>
+          <div>{{ auth.user?.role === 'admin' ? '管理员' : '普通用户' }}</div>
+        </div>
+        <button v-if="isAdmin()" class="item" @click="openUsers; userMenuOpen = false">账号管理</button>
+        <button class="item" @click="openChangePwd; userMenuOpen = false">修改密码</button>
+        <button class="item danger" @click="doLogout">退出登录</button>
+      </div>
       <div class="clock">
         <div>{{ clockTime }}</div>
         <div>{{ clockDate }}</div>
@@ -76,24 +91,56 @@ import DockerWindow from './components/windows/DockerWindow.vue'
 import ProcessWindow from './components/windows/ProcessWindow.vue'
 import FilesWindow from './components/windows/FilesWindow.vue'
 import TerminalWindow from './components/windows/TerminalWindow.vue'
+import UserWindow from './components/windows/UserWindow.vue'
+import ChangePasswordWindow from './components/windows/ChangePasswordWindow.vue'
+import Login from './views/Login.vue'
 import { systemApi } from './api'
-import { Container, Settings, Folder, Terminal, LayoutGrid } from 'lucide-vue-next'
+import { auth, clearAuth, isAdmin } from './store/auth'
+import { Container, Settings, Folder, Terminal, LayoutGrid, UserCircle2 } from 'lucide-vue-next'
 
-const shortcuts = [
-  { key: 'docker', label: 'Docker', icon: markRaw(Container), component: markRaw(DockerWindow), w: 820, h: 520 },
-  { key: 'process', label: '进程管理', icon: markRaw(Settings), component: markRaw(ProcessWindow), w: 780, h: 520 },
-  { key: 'files', label: '文件管理', icon: markRaw(Folder), component: markRaw(FilesWindow), w: 820, h: 540 },
-  { key: 'terminal', label: '终端', icon: markRaw(Terminal), component: markRaw(TerminalWindow), w: 780, h: 460 }
-]
+const loggedIn = computed(() => !!auth.token)
+function onLoggedIn() { /* 触发响应式重渲染 */ }
+
+const shortcuts = ref([
+  { key: 'docker', label: 'Docker', icon: markRaw(Container), component: markRaw(DockerWindow), w: 820, h: 520, adminOnly: false },
+  { key: 'process', label: '进程管理', icon: markRaw(Settings), component: markRaw(ProcessWindow), w: 780, h: 520, adminOnly: false },
+  { key: 'files', label: '文件管理', icon: markRaw(Folder), component: markRaw(FilesWindow), w: 820, h: 540, adminOnly: false },
+  { key: 'terminal', label: '终端', icon: markRaw(Terminal), component: markRaw(TerminalWindow), w: 780, h: 460, adminOnly: false },
+  { key: 'changepwd', label: '修改密码', icon: markRaw(UserCircle2), component: markRaw(ChangePasswordWindow), w: 420, h: 360, adminOnly: false }
+])
+if (isAdmin()) {
+  shortcuts.value.push({
+    key: 'users', label: '账号管理', icon: markRaw(UserCircle2),
+    component: markRaw(UserWindow), w: 600, h: 460, adminOnly: true
+  })
+}
 
 const selected = ref(null)
 const openWindows = ref([])
 const activeWindowId = ref(null)
+const userMenuOpen = ref(false)
 let windowSeq = 0
 let zSeq = 100
 
+function toggleUserMenu() { userMenuOpen.value = !userMenuOpen.value }
+function openUsers() { openWindow('users') }
+function openChangePwd() { openWindow('changepwd') }
+
+function doLogout() {
+  userMenuOpen.value = false
+  clearAuth()
+  location.reload()
+}
+
+function onDocClick(e) {
+  if (!userMenuOpen.value) return
+  const chip = e.target.closest('.user-chip')
+  const menu = e.target.closest('.user-menu')
+  if (!chip && !menu) userMenuOpen.value = false
+}
+
 function openWindow(key) {
-  const def = shortcuts.find(s => s.key === key)
+  const def = shortcuts.value.find(s => s.key === key)
   if (!def) return
   const existing = openWindows.value.find(w => w.key === key)
   if (existing) {
@@ -207,10 +254,12 @@ onMounted(() => {
   overviewTimer = setInterval(refreshOverview, 2000)
   updateClock()
   clockTimer = setInterval(updateClock, 1000)
+  document.addEventListener('mousedown', onDocClick)
 })
 
 onUnmounted(() => {
   clearInterval(overviewTimer)
   clearInterval(clockTimer)
+  document.removeEventListener('mousedown', onDocClick)
 })
 </script>

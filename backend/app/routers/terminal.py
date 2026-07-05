@@ -1,9 +1,11 @@
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends
 import asyncio
 import os
 import platform
 import threading
 import subprocess
+
+from app.auth import get_current_user_ws
 
 router = APIRouter()
 
@@ -20,7 +22,10 @@ else:
 
 
 @router.websocket("/ws")
-async def terminal_ws(websocket: WebSocket):
+async def terminal_ws(websocket: WebSocket, user=Depends(get_current_user_ws)):
+    # get_current_user_ws 在鉴权失败时会关闭连接并返回 None
+    if user is None:
+        return
     await websocket.accept()
     try:
         if IS_WINDOWS:

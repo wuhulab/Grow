@@ -4,12 +4,13 @@
 
 ## 功能特性
 
+- **账号与权限系统** —— 基于 JWT 的用户登录、角色（管理员/普通用户）、账号管理、强制改密，登录后所有受保护接口均需 `Authorization: Bearer <token>`
 - **桌面式交互界面** —— 窗口化应用、任务栏、桌面快捷方式，支持拖拽、最大化/最小化
 - **实时系统监控** —— CPU、内存、磁盘、网络、负载，通过 WebSocket 实时推送数据与图表
 - **Docker 管理** —— 容器与镜像的查看、启动、停止、日志等操作
 - **进程管理** —— 查看系统运行中的进程列表与详情
 - **文件管理** —— 浏览目录、上传/下载文件
-- **Web 终端** —— 基于 xterm.js 的浏览器内终端，直接操作服务器
+- **Web 终端** —— 基于 xterm.js 的浏览器内终端，直接操作服务器（WebSocket 通过 `?token=` 鉴权）
 - **备忘录** —— 随手记录与查看系统备注信息
 
 ## 技术栈
@@ -85,12 +86,25 @@ npm run build
 
 | 模块 | 前缀 | 说明 |
 |------|------|------|
+| Auth | `/api/auth` | 登录、当前用户、改密、用户管理（管理员） |
 | System | `/api/system` | CPU、内存、磁盘、网络、负载、WebSocket 实时流 |
 | Docker | `/api/docker` | 容器与镜像管理 |
 | Process | `/api/process` | 进程列表与详情 |
 | Files | `/api/files` | 文件浏览与传输 |
-| Terminal | `/api/terminal` | WebSocket 终端会话 |
+| Terminal | `/api/terminal` | WebSocket 终端会话（通过 `?token=` 鉴权） |
 | Notes | `/api/notes` | 备忘录 CRUD |
+
+除 `/api/auth/login` 与 `/api/health` 外，所有接口均要求 `Authorization: Bearer <token>` 头。
+
+## 默认账号
+
+首次启动后会在 `backend/data/users.json` 中自动播种：
+
+- 账号：`admin`
+- 密码：`admin123`
+- 状态：首次登录后强制改密
+
+签名密钥持久化在 `backend/data/secret.key`（首次启动自动生成）。请在生产环境中妥善保管该文件及 `users.json`，并修改默认密码。
 
 详细接口定义请参考 `backend/app/routers/` 下的各路由文件。
 

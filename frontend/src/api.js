@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { auth, clearAuth } from './store/auth'
 
 const api = axios.create({
   baseURL: '/api',
@@ -10,7 +11,43 @@ const dockerHttp = axios.create({
   timeout: 60000
 })
 
+// 请求拦截：自动附加 Bearer 令牌
+function attachToken(config) {
+  if (auth.token) {
+    config.headers = config.headers || {}
+    config.headers.Authorization = `Bearer ${auth.token}`
+  }
+  return config
+}
+api.interceptors.request.use(attachToken)
+dockerHttp.interceptors.request.use(attachToken)
+
+// 响应拦截：401 时清除登录态并刷新到登录页
+function on401(err) {
+  if (err?.response?.status === 401) {
+    clearAuth()
+    if (location.pathname !== '/') {
+      location.href = '/'
+    } else {
+      location.reload()
+    }
+  }
+  return Promise.reject(err)
+}
+api.interceptors.response.use(r => r, on401)
+dockerHttp.interceptors.response.use(r => r, on401)
+
 export default api
+
+export const authApi = {
+  login: (username, password) => api.post('/auth/login', { username, password }).then(r => r.data),
+  me: () => api.get('/auth/me').then(r => r.data),
+  changePassword: (old_password, new_password) => api.post('/auth/password', { old_password, new_password }).then(r => r.data),
+  listUsers: () => api.get('/auth/users').then(r => r.data),
+  createUser: (username, password, role) => api.post('/auth/users', { username, password, role }).then(r => r.data),
+  updateUser: (username, body) => api.put(`/auth/users/${username}`, body).then(r => r.data),
+  deleteUser: (username) => api.delete(`/auth/users/${username}`).then(r => r.data)
+}
 
 export const systemApi = {
   overview: () => api.get('/system/overview').then(r => r.data),
